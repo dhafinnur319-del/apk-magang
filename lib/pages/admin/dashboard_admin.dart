@@ -4,6 +4,7 @@ import '../login_page.dart';
 import 'data_peserta_page.dart';
 import 'data_absensi_page.dart';
 import 'rekap_page.dart';
+import 'izin_admin_page.dart';
 
 class DashboardAdmin extends StatelessWidget {
   const DashboardAdmin({super.key});
@@ -36,7 +37,10 @@ class DashboardAdmin extends StatelessWidget {
               const DataPesertaPage()),
           _menu(context, Icons.list_alt, 'Data Absensi',
               const DataAbsensiPage()),
-          _menu(context, Icons.bar_chart, 'Rekap Absensi', const RekapPage()),
+          _menu(context, Icons.report, 'Izin',
+              const IzinAdminPage()),
+          _menu(context, Icons.bar_chart, 'Rekap Absensi', 
+              const RekapPage()),
         ],
       ),
     );

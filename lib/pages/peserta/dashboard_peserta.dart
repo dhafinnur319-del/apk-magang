@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../models/user_model.dart';
 import '../../models/absensi_model.dart';
@@ -6,6 +8,9 @@ import '../../services/auth_service.dart';
 import '../../services/absensi_service.dart';
 import '../login_page.dart';
 import 'riwayat_page.dart';
+import 'profil_page.dart';
+import 'izin_page.dart';
+import 'riwayat_izin_page.dart';
 
 class DashboardPeserta extends StatefulWidget {
   const DashboardPeserta({super.key});
@@ -37,16 +42,54 @@ class _DashboardPesertaState extends State<DashboardPeserta> {
   }
 
   Future<void> _absenMasuk() async {
-    final result = await _absensiService.absenMasuk(_user!.nama);
+    final pos = await _absensiService.ambilLokasi();
+    if (pos == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal ambil lokasi. Aktifkan GPS.')),
+      );
+      return;
+    }
+
+    final jarak = _absensiService.jarakKeKantor(pos);
+    if (jarak > AbsensiService.radiusMeter) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(
+                'Anda di luar radius kantor (${jarak.toStringAsFixed(0)} m)')),
+      );
+      return;
+    }
+
+    final picked = await ImagePicker()
+        .pickImage(source: ImageSource.camera, imageQuality: 60);
+    if (picked == null) return;
+
+    final result = await _absensiService.absenMasuk(
+      nama: _user!.nama,
+      pos: pos,
+      foto: File(picked.path),
+    );
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(result)));
     _loadData();
   }
 
   Future<void> _absenPulang() async {
-    final result = await _absensiService.absenPulang();
+    final pos = await _absensiService.ambilLokasi();
+    final picked = await ImagePicker()
+        .pickImage(source: ImageSource.camera, imageQuality: 60);
+    if (picked == null) return;
+
+    final result = await _absensiService.absenPulang(
+      pos: pos,
+      foto: File(picked.path),
+    );
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(result)));
     _loadData();
   }
 
@@ -63,13 +106,23 @@ class _DashboardPesertaState extends State<DashboardPeserta> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final tanggal = DateFormat('EEEE, d MMMM yyyy', 'id_ID')
-        .format(DateTime.now());
+    final tanggal =
+        DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(DateTime.now());
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('SIMAGANG'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const ProfilPage())),
+          ),
+          IconButton(
+            icon: const Icon(Icons.event_note),
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const RiwayatIzinPage())),
+          ),
           IconButton(
             icon: const Icon(Icons.history),
             onPressed: () => Navigator.push(context,
@@ -91,13 +144,9 @@ class _DashboardPesertaState extends State<DashboardPeserta> {
             const SizedBox(height: 24),
             Row(
               children: [
-                Expanded(
-                  child: _card('MASUK', _absen?.jamMasuk ?? '-'),
-                ),
+                Expanded(child: _card('MASUK', _absen?.jamMasuk ?? '-')),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: _card('PULANG', _absen?.jamPulang ?? '-'),
-                ),
+                Expanded(child: _card('PULANG', _absen?.jamPulang ?? '-')),
               ],
             ),
             const SizedBox(height: 16),
@@ -122,14 +171,24 @@ class _DashboardPesertaState extends State<DashboardPeserta> {
             ),
             const SizedBox(height: 12),
             ElevatedButton.icon(
-              onPressed: (_absen?.jamMasuk != null && _absen?.jamPulang == null)
-                  ? _absenPulang
-                  : null,
+              onPressed:
+                  (_absen?.jamMasuk != null && _absen?.jamPulang == null)
+                      ? _absenPulang
+                      : null,
               icon: const Icon(Icons.logout),
               label: const Text('ABSEN PULANG'),
               style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(50),
                   backgroundColor: Colors.orange),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const IzinPage())),
+              icon: const Icon(Icons.add_circle_outline),
+              label: const Text('AJUKAN IZIN'),
+              style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(50)),
             ),
           ],
         ),
