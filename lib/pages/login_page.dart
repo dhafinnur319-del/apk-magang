@@ -53,7 +53,7 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 12),
                 const Text('SIMAGANG',
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-                const Text('BAPPEDA JAWA TENGAH'),
+                const Text('BAPENDA JAWA TENGAH'),
                 const SizedBox(height: 32),
                 TextField(
                   controller: _emailController,

@@ -50,7 +50,7 @@ class _SplashPageState extends State<SplashPage> {
           children: [
             Icon(Icons.school, size: 80, color: Colors.blue),
             SizedBox(height: 16),
-            Text('SIMAGANG BAPPEDA JATENG',
+            Text('SIMAGANG BAPENDA JATENG',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             SizedBox(height: 24),
             CircularProgressIndicator(),
