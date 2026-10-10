@@ -5,6 +5,7 @@ class UserModel {
   final String email;
   final String role;
   final String noHp;
+  final String gender; // <-- FIELD BARU
 
   UserModel({
     required this.id,
@@ -13,6 +14,7 @@ class UserModel {
     required this.email,
     required this.role,
     required this.noHp,
+    required this.gender, // <-- TAMBAHAN
   });
 
   factory UserModel.fromMap(String id, Map<String, dynamic> data) {
@@ -23,6 +25,19 @@ class UserModel {
       email: data['email'] ?? '',
       role: data['role'] ?? 'peserta',
       noHp: data['no_hp'] ?? '',
+      gender: data['gender'] ?? '', // <-- TAMBAHAN
     );
+  }
+
+  // Helper untuk menampilkan gender dalam Bahasa Indonesia
+  String get genderLabel {
+    switch (gender.toLowerCase()) {
+      case 'male':
+        return 'Laki-laki';
+      case 'female':
+        return 'Perempuan';
+      default:
+        return '-';
+    }
   }
 }
