@@ -1,18 +1,16 @@
-import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/absensi_model.dart';
-import 'cloudinary_service.dart';
 
 class AbsensiService {
   final _firestore = FirebaseFirestore.instance;
   final _auth = FirebaseAuth.instance;
 
-  // ⚠️ GANTI dengan koordinat Bappeda Jawa Tengah
-  static const double kantorLat = -6.9932;
-  static const double kantorLng = 110.4203;
-  static const double radiusMeter = 100;
+  // ⚠️ Koordinat Bappeda Jawa Tengah — JANGAN DIUBAH
+  static const double kantorLat = -6.968994400736242;
+  static const double kantorLng = 110.42410812433103;
+  static const double radiusMeter = 1000;
 
   String _today() {
     final n = DateTime.now();
@@ -41,16 +39,18 @@ class AbsensiService {
   }
 
   double jarakKeKantor(Position pos) => Geolocator.distanceBetween(
-        pos.latitude,
-        pos.longitude,
-        kantorLat,
-        kantorLng,
-      );
+    pos.latitude,
+    pos.longitude,
+    kantorLat,
+    kantorLng,
+  );
 
+  // ============================================================
+  // ABSEN MASUK — tanpa foto
+  // ============================================================
   Future<String> absenMasuk({
     required String nama,
     required Position pos,
-    required File foto,
   }) async {
     final uid = _auth.currentUser!.uid;
     final tanggal = _today();
@@ -61,12 +61,6 @@ class AbsensiService {
         .where('tanggal', isEqualTo: tanggal)
         .get();
     if (existing.docs.isNotEmpty) return 'Anda sudah absen masuk hari ini';
-
-    final fotoUrl = await CloudinaryService.uploadFile(
-      foto,
-      folder: 'simagang/absensi',
-    );
-    if (fotoUrl == null) return 'Gagal upload foto';
 
     final now = DateTime.now();
     final jamMasuk = now.hour * 60 + now.minute;
@@ -82,14 +76,16 @@ class AbsensiService {
       'status': status,
       'latitude': pos.latitude,
       'longitude': pos.longitude,
-      'foto_masuk': fotoUrl,
       'created_at': FieldValue.serverTimestamp(),
     });
 
     return 'Absen masuk berhasil: ${_now()}';
   }
 
-  Future<String> absenPulang({Position? pos, File? foto}) async {
+  // ============================================================
+  // ABSEN PULANG — tanpa foto
+  // ============================================================
+  Future<String> absenPulang({Position? pos}) async {
     final uid = _auth.currentUser!.uid;
     final tanggal = _today();
 
@@ -105,19 +101,10 @@ class AbsensiService {
       return 'Anda sudah absen pulang hari ini';
     }
 
-    String? fotoUrl;
-    if (foto != null) {
-      fotoUrl = await CloudinaryService.uploadFile(
-        foto,
-        folder: 'simagang/absensi',
-      );
-    }
-
     await doc.reference.update({
       'jam_pulang': _now(),
       if (pos != null) 'latitude_pulang': pos.latitude,
       if (pos != null) 'longitude_pulang': pos.longitude,
-      if (fotoUrl != null) 'foto_pulang': fotoUrl,
     });
 
     return 'Absen pulang berhasil: ${_now()}';
@@ -132,7 +119,9 @@ class AbsensiService {
         .get();
     if (snapshot.docs.isEmpty) return null;
     return AbsensiModel.fromMap(
-        snapshot.docs.first.id, snapshot.docs.first.data());
+      snapshot.docs.first.id,
+      snapshot.docs.first.data(),
+    );
   }
 
   Stream<List<AbsensiModel>> riwayatUser() {
@@ -142,12 +131,12 @@ class AbsensiService {
         .where('user_id', isEqualTo: uid)
         .snapshots()
         .map((snap) {
-      final list = snap.docs
-          .map((d) => AbsensiModel.fromMap(d.id, d.data()))
-          .toList();
-      list.sort((a, b) => b.tanggal.compareTo(a.tanggal));
-      return list;
-    });
+          final list = snap.docs
+              .map((d) => AbsensiModel.fromMap(d.id, d.data()))
+              .toList();
+          list.sort((a, b) => b.tanggal.compareTo(a.tanggal));
+          return list;
+        });
   }
 
   Stream<List<AbsensiModel>> semuaAbsensi() {
@@ -155,8 +144,10 @@ class AbsensiService {
         .collection('absensi')
         .orderBy('tanggal', descending: true)
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => AbsensiModel.fromMap(d.id, d.data()))
-            .toList());
+        .map(
+          (snap) => snap.docs
+              .map((d) => AbsensiModel.fromMap(d.id, d.data()))
+              .toList(),
+        );
   }
 }
