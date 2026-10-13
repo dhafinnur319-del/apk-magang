@@ -5,6 +5,7 @@ import 'data_peserta_page.dart';
 import 'data_absensi_page.dart';
 import 'rekap_page.dart';
 import 'izin_admin_page.dart';
+import '../../widgets/logout_dialog.dart';
 
 class DashboardAdmin extends StatelessWidget {
   const DashboardAdmin({super.key});
@@ -18,11 +19,16 @@ class DashboardAdmin extends StatelessWidget {
   final Color _iconBg = const Color(0xFFF0E5D7);
 
   Future<void> _logout(BuildContext context) async {
-    await AuthService().logout();
-    if (!context.mounted) return;
-    Navigator.pushReplacement(
-        context, MaterialPageRoute(builder: (_) => const LoginPage()));
-  }
+  final confirmed = await LogoutDialog.show(context);
+  if (!confirmed) return;
+
+  await AuthService().logout();
+  if (!context.mounted) return;
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(builder: (_) => const LoginPage()),
+  );
+}
 
   @override
   Widget build(BuildContext context) {

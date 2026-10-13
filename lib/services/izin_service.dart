@@ -1,6 +1,6 @@
-import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/izin_model.dart';
 import 'cloudinary_service.dart';
 
@@ -14,7 +14,7 @@ class IzinService {
     required String jenis,
     required String alasan,
     required String keterangan,
-    File? lampiran,
+    XFile? lampiran,
   }) async {
     try {
       final uid = _auth.currentUser!.uid;
@@ -75,5 +75,12 @@ class IzinService {
 
   Future<void> updateStatus(String id, String status) async {
     await _firestore.collection('izin').doc(id).update({'status': status});
+  }
+
+  // ============================================================
+  // HAPUS IZIN (baru ditambahkan)
+  // ============================================================
+  Future<void> hapusIzin(String id) async {
+    await _firestore.collection('izin').doc(id).delete();
   }
 }

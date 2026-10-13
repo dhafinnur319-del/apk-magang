@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../models/absensi_model.dart';
+import '../../models/izin_model.dart';
 import '../../services/absensi_service.dart';
+import '../../services/izin_service.dart';
 
 class DataAbsensiPage extends StatefulWidget {
   const DataAbsensiPage({super.key});
@@ -11,7 +13,7 @@ class DataAbsensiPage extends StatefulWidget {
 
 class _DataAbsensiPageState extends State<DataAbsensiPage> {
   final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocusNode = FocusNode(); // <-- TAMBAHAN
+  final FocusNode _searchFocusNode = FocusNode();
   String _submittedQuery = '';
   String _selectedStatus = 'Semua';
 
@@ -36,7 +38,7 @@ class _DataAbsensiPageState extends State<DataAbsensiPage> {
   @override
   void dispose() {
     _searchController.dispose();
-    _searchFocusNode.dispose(); // <-- TAMBAHAN
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -44,7 +46,6 @@ class _DataAbsensiPageState extends State<DataAbsensiPage> {
     setState(() {
       _submittedQuery = value.trim();
     });
-    // Pakai focusNode, bukan FocusScope
     _searchFocusNode.unfocus();
   }
 
@@ -71,7 +72,6 @@ class _DataAbsensiPageState extends State<DataAbsensiPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _bgColor,
-      // Penting: resizeToAvoidBottomInset agar layout tidak "nyangkut"
       resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Center(
@@ -83,53 +83,95 @@ class _DataAbsensiPageState extends State<DataAbsensiPage> {
                 Expanded(
                   child: StreamBuilder<List<AbsensiModel>>(
                     stream: AbsensiService().semuaAbsensi(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState ==
-                          ConnectionState.waiting) {
-                        return const Center(
-                          child: CircularProgressIndicator(
-                            color: Color(0xFF5A3218),
-                            strokeWidth: 2,
-                          ),
-                        );
-                      }
+                    builder: (context, absensiSnap) {
+                      return StreamBuilder<List<IzinModel>>(
+                        stream: IzinService().semuaIzin(),
+                        builder: (context, izinSnap) {
+                          // ==========================================
+                          // LOADING STATE
+                          // ==========================================
+                          if (absensiSnap.connectionState ==
+                                  ConnectionState.waiting ||
+                              izinSnap.connectionState ==
+                                  ConnectionState.waiting) {
+                            return const Center(
+                              child: CircularProgressIndicator(
+                                color: Color(0xFF5A3218),
+                                strokeWidth: 2,
+                              ),
+                            );
+                          }
 
-                      if (snapshot.hasError) {
-                        return _buildEmptyState(
-                          icon: Icons.error_outline,
-                          title: 'Terjadi kesalahan',
-                          description: 'Gagal memuat data absensi.',
-                        );
-                      }
+                          // ==========================================
+                          // ERROR STATE
+                          // ==========================================
+                          if (absensiSnap.hasError || izinSnap.hasError) {
+                            return _buildEmptyState(
+                              icon: Icons.error_outline,
+                              title: 'Terjadi kesalahan',
+                              description: 'Gagal memuat data absensi.',
+                            );
+                          }
 
-                      final allData = snapshot.data ?? [];
+                          // ==========================================
+                          // GABUNGKAN DATA
+                          // ==========================================
+                          final List<AbsensiModel> absensiList =
+                              absensiSnap.data ?? <AbsensiModel>[];
+                          final List<IzinModel> izinList =
+                              izinSnap.data ?? <IzinModel>[];
 
-                      final sorted = [...allData]..sort(
-                          (a, b) => b.tanggal.compareTo(a.tanggal),
-                        );
+                          // Konversi izin (Disetujui) → AbsensiModel
+                          final List<AbsensiModel> izinSebagaiAbsensi =
+                              izinList
+                                  .where((IzinModel i) =>
+                                      i.status.toLowerCase() == 'disetujui')
+                                  .map<AbsensiModel>((IzinModel i) =>
+                                      AbsensiModel(
+                                        id: i.id,
+                                        userId: i.userId,
+                                        nama: i.nama,
+                                        tanggal: i.tanggal,
+                                        jamMasuk: null,
+                                        jamPulang: null,
+                                        status: i.jenis, // 'Izin' / 'Sakit'
+                                      ))
+                                  .toList();
 
-                      final filtered = sorted.where((a) {
-                        final matchQuery = _submittedQuery.isEmpty ||
-                            a.nama
-                                .toLowerCase()
-                                .contains(_submittedQuery.toLowerCase());
-                        final matchStatus = _selectedStatus == 'Semua' ||
-                            a.status.toLowerCase() ==
-                                _selectedStatus.toLowerCase();
-                        return matchQuery && matchStatus;
-                      }).toList();
+                          // Gabung & urutkan descending berdasarkan tanggal
+                          final List<AbsensiModel> allData = <AbsensiModel>[
+                            ...absensiList,
+                            ...izinSebagaiAbsensi,
+                          ]..sort((AbsensiModel a, AbsensiModel b) =>
+                              b.tanggal.compareTo(a.tanggal));
 
-                      return Column(
-                        children: [
-                          _buildSearchSection(),
-                          Expanded(
-                            child: _buildAbsensiList(
-                              context,
-                              filtered,
-                              allData.isEmpty,
-                            ),
-                          ),
-                        ],
+                          // Filter
+                          final List<AbsensiModel> filtered = allData
+                              .where((AbsensiModel a) {
+                                final matchQuery = _submittedQuery.isEmpty ||
+                                    a.nama.toLowerCase().contains(
+                                        _submittedQuery.toLowerCase());
+                                final matchStatus =
+                                    _selectedStatus == 'Semua' ||
+                                        a.status.toLowerCase() ==
+                                            _selectedStatus.toLowerCase();
+                                return matchQuery && matchStatus;
+                              })
+                              .toList();
+
+                          return Column(
+                            children: [
+                              _buildSearchSection(),
+                              Expanded(
+                                child: _buildAbsensiList(
+                                  context,
+                                  filtered,
+                                  allData.isEmpty,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       );
                     },
                   ),
@@ -190,7 +232,6 @@ class _DataAbsensiPageState extends State<DataAbsensiPage> {
       child: Row(
         children: [
           Expanded(
-            // GestureDetector agar tap di mana saja fokus ke TextField
             child: GestureDetector(
               onTap: () {
                 _searchFocusNode.requestFocus();
@@ -204,7 +245,7 @@ class _DataAbsensiPageState extends State<DataAbsensiPage> {
                 ),
                 child: TextField(
                   controller: _searchController,
-                  focusNode: _searchFocusNode, // <-- PASANG FOCUS NODE
+                  focusNode: _searchFocusNode,
                   textInputAction: TextInputAction.search,
                   onSubmitted: _onSearchSubmitted,
                   style: TextStyle(fontSize: 14, color: _textPrimary),
@@ -217,7 +258,6 @@ class _DataAbsensiPageState extends State<DataAbsensiPage> {
                       child: Icon(Icons.search,
                           color: _primaryBrown, size: 20),
                     ),
-                    // Tombol clear (X) jika ada teks
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.close,
@@ -260,7 +300,6 @@ class _DataAbsensiPageState extends State<DataAbsensiPage> {
 
   // --- FILTER BOTTOM SHEET ---
   void _showFilterSheet() {
-    // Pastikan keyboard tertutup saat buka filter
     _searchFocusNode.unfocus();
 
     showModalBottomSheet(
@@ -400,6 +439,10 @@ class _DataAbsensiPageState extends State<DataAbsensiPage> {
             ? '-'
             : a.jamPulang!;
 
+        // Cek apakah ini record izin/sakit (tidak punya jam masuk/pulang)
+        final isIzinAtauSakit = a.status.toLowerCase() == 'izin' ||
+            a.status.toLowerCase() == 'sakit';
+
         return Container(
           constraints: const BoxConstraints(minHeight: 72),
           decoration: BoxDecoration(
@@ -417,9 +460,11 @@ class _DataAbsensiPageState extends State<DataAbsensiPage> {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  Icons.person,
+                  isIzinAtauSakit
+                      ? Icons.description_outlined
+                      : Icons.person,
                   color: const Color(0xFF6A3A18),
-                  size: 24,
+                  size: 22,
                 ),
               ),
               const SizedBox(width: 12),
@@ -441,25 +486,37 @@ class _DataAbsensiPageState extends State<DataAbsensiPage> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        '${a.tanggal}  •  Masuk: $masuk',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: _textSecondary,
+                      if (isIzinAtauSakit)
+                        Text(
+                          '${a.tanggal}  •  ${a.status}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _textSecondary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      else ...[
+                        Text(
+                          '${a.tanggal}  •  Masuk: $masuk',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _textSecondary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 1),
-                      Text(
-                        'Pulang: $pulang',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: _textSecondary,
+                        const SizedBox(height: 1),
+                        Text(
+                          'Pulang: $pulang',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _textSecondary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      ],
                     ],
                   ),
                 ),

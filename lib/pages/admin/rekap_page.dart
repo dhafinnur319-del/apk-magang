@@ -91,6 +91,12 @@ class _RekapPageState extends State<RekapPage> {
     return d.year == _selectedMonth.year && d.month == _selectedMonth.month;
   }
 
+  /// Cek apakah status izin berarti disetujui (case-insensitive, terima variasi).
+  bool _isIzinDisetujui(String status) {
+    final s = status.toLowerCase().trim();
+    return s == 'disetujui' || s == 'approved' || s == 'approve';
+  }
+
   // ---------- BUILD ----------
   @override
   Widget build(BuildContext context) {
@@ -104,24 +110,26 @@ class _RekapPageState extends State<RekapPage> {
               children: [
                 _buildHeader(context),
                 Expanded(
-                  // Gabungkan 3 stream: users, absensi, izin
                   child: StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
                         .collection('users')
                         .where('role', isEqualTo: 'peserta')
                         .snapshots(),
                     builder: (context, userSnap) {
-                      if (userSnap.connectionState == ConnectionState.waiting) {
+                      if (userSnap.connectionState ==
+                          ConnectionState.waiting) {
                         return const Center(
                           child: CircularProgressIndicator(
-                            color: _primaryBrown, strokeWidth: 2),
+                              color: _primaryBrown, strokeWidth: 2),
                         );
                       }
                       if (userSnap.hasError) return _buildErrorState();
 
                       final userDocs = userSnap.data?.docs ?? [];
                       final participantList = userDocs
-                          .map((d) => (d.data() as Map<String, dynamic>)['nama']?.toString() ?? '')
+                          .map((d) => (d.data() as Map<String, dynamic>)['nama']
+                                  ?.toString() ??
+                              '')
                           .where((n) => n.isNotEmpty)
                           .toList()
                         ..sort();
@@ -133,12 +141,14 @@ class _RekapPageState extends State<RekapPage> {
                             stream: IzinService().semuaIzin(),
                             builder: (context, izinSnap) {
                               final isWaiting =
-                                  absSnap.connectionState == ConnectionState.waiting ||
-                                  izinSnap.connectionState == ConnectionState.waiting;
+                                  absSnap.connectionState ==
+                                          ConnectionState.waiting ||
+                                      izinSnap.connectionState ==
+                                          ConnectionState.waiting;
                               if (isWaiting) {
                                 return const Center(
                                   child: CircularProgressIndicator(
-                                    color: _primaryBrown, strokeWidth: 2),
+                                      color: _primaryBrown, strokeWidth: 2),
                                 );
                               }
                               if (absSnap.hasError || izinSnap.hasError) {
@@ -155,7 +165,8 @@ class _RekapPageState extends State<RekapPage> {
                                   if (_selectedParticipant == null)
                                     _buildInitialEmptyState()
                                   else
-                                    ..._buildSelectedContent(allAbsensi, allIzin),
+                                    ..._buildSelectedContent(
+                                        allAbsensi, allIzin),
                                 ],
                               );
                             },
@@ -185,13 +196,16 @@ class _RekapPageState extends State<RekapPage> {
         children: [
           GestureDetector(
             onTap: () => Navigator.pop(context),
-            child: const Icon(Icons.arrow_back, color: _primaryBrown, size: 24),
+            child: const Icon(Icons.arrow_back,
+                color: _primaryBrown, size: 24),
           ),
           const SizedBox(width: 12),
           const Expanded(
             child: Text('Rekap Absensi',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold,
-                color: _textPrimary)),
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: _textPrimary)),
           ),
           const Icon(Icons.account_balance, color: _primaryBrown, size: 26),
         ],
@@ -219,11 +233,12 @@ class _RekapPageState extends State<RekapPage> {
             child: Row(
               children: [
                 Container(
-                  width: 42, height: 42,
+                  width: 42,
+                  height: 42,
                   decoration: const BoxDecoration(
-                    color: _avatarBg, shape: BoxShape.circle),
+                      color: _avatarBg, shape: BoxShape.circle),
                   child: const Icon(Icons.person,
-                    color: Color(0xFF6A3A18), size: 22),
+                      color: Color(0xFF6A3A18), size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -232,24 +247,31 @@ class _RekapPageState extends State<RekapPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        hasSelection ? _selectedParticipant! : 'Pilih Peserta Magang',
-                        style: const TextStyle(fontSize: 14,
-                          fontWeight: FontWeight.bold, color: _textPrimary),
-                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                        hasSelection
+                            ? _selectedParticipant!
+                            : 'Pilih Peserta Magang',
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: _textPrimary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        hasSelection ? 'Ketuk untuk ganti peserta'
-                          : 'Silakan pilih peserta untuk melihat rekap',
-                        style: const TextStyle(fontSize: 12,
-                          color: _textSecondary),
-                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                        hasSelection
+                            ? 'Ketuk untuk ganti peserta'
+                            : 'Silakan pilih peserta untuk melihat rekap',
+                        style: const TextStyle(
+                            fontSize: 12, color: _textSecondary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
                 const Icon(Icons.keyboard_arrow_down,
-                  color: _primaryBrown, size: 22),
+                    color: _primaryBrown, size: 22),
               ],
             ),
           ),
@@ -283,7 +305,8 @@ class _RekapPageState extends State<RekapPage> {
               children: [
                 Center(
                   child: Container(
-                    width: 40, height: 4,
+                    width: 40,
+                    height: 4,
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
                       color: _borderColor,
@@ -292,8 +315,10 @@ class _RekapPageState extends State<RekapPage> {
                   ),
                 ),
                 Text('Pilih Peserta (${participants.length})',
-                  style: const TextStyle(fontSize: 16,
-                    fontWeight: FontWeight.bold, color: _textPrimary)),
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: _textPrimary)),
                 const SizedBox(height: 12),
                 ...participants.map((name) {
                   final isSelected = _selectedParticipant == name;
@@ -304,18 +329,25 @@ class _RekapPageState extends State<RekapPage> {
                       Navigator.pop(context);
                     },
                     leading: Container(
-                      width: 38, height: 38,
+                      width: 38,
+                      height: 38,
                       decoration: const BoxDecoration(
-                        color: _avatarBg, shape: BoxShape.circle),
+                          color: _avatarBg, shape: BoxShape.circle),
                       child: const Icon(Icons.person,
-                        color: Color(0xFF6A3A18), size: 20),
+                          color: Color(0xFF6A3A18), size: 20),
                     ),
                     title: Text(name,
-                      style: TextStyle(
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        color: _textPrimary, fontSize: 14)),
-                    trailing: isSelected ? const Icon(Icons.check,
-                      color: _primaryBrown, size: 18) : null,
+                        style: TextStyle(
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: _textPrimary,
+                          fontSize: 14,
+                        )),
+                    trailing: isSelected
+                        ? const Icon(Icons.check,
+                            color: _primaryBrown, size: 18)
+                        : null,
                   );
                 }),
               ],
@@ -333,78 +365,90 @@ class _RekapPageState extends State<RekapPage> {
       child: Column(
         children: [
           Container(
-            width: 140, height: 140,
+            width: 140,
+            height: 140,
             decoration: const BoxDecoration(
-              color: _avatarBg, shape: BoxShape.circle),
+                color: _avatarBg, shape: BoxShape.circle),
             child: const Icon(Icons.assignment_ind_outlined,
-              size: 70, color: _primaryBrown),
+                size: 70, color: _primaryBrown),
           ),
           const SizedBox(height: 24),
           const Text('Belum ada peserta yang dipilih',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
-              color: _textPrimary)),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: _textPrimary)),
           const SizedBox(height: 8),
           const Text(
             'Silakan pilih peserta magang terlebih dahulu\nuntuk melihat rekap absensi.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, height: 1.5,
-              color: _textSecondary)),
+            style: TextStyle(
+                fontSize: 12, height: 1.5, color: _textSecondary),
+          ),
         ],
       ),
     );
   }
 
-  // ---------- SELECTED CONTENT (LOGIKA ALFA DI SINI) ----------
+  // ---------- SELECTED CONTENT ----------
   List<Widget> _buildSelectedContent(
       List<AbsensiModel> allAbsensi, List<IzinModel> allIzin) {
     final name = _selectedParticipant!;
 
-    // 1. Ambil absensi peserta di bulan terpilih
+    // 1. Absensi peserta di bulan terpilih
     final absensiPeserta = allAbsensi
         .where((a) =>
             a.nama.toLowerCase() == name.toLowerCase() &&
             _isInSelectedMonth(a.tanggal))
         .toList();
 
-    // 2. Ambil izin DISETUJUI peserta di bulan terpilih
+    // 2. Izin DISETUJUI peserta di bulan terpilih (fleksibel)
     final izinDisetujui = allIzin.where((i) {
       return i.nama.toLowerCase() == name.toLowerCase() &&
-          i.status.toLowerCase() == 'disetujui' &&
+          _isIzinDisetujui(i.status) &&
           _isInSelectedMonth(i.tanggal);
     }).toList();
 
-    // 3. Counter status
+    // 3. Counter status — prioritas Izin/Sakit > Absensi
+    //    (satu tanggal = satu status)
     final counts = <String, int>{
-      'Hadir': 0, 'Terlambat': 0, 'Izin': 0, 'Sakit': 0, 'Alfa': 0,
+      'Hadir': 0,
+      'Terlambat': 0,
+      'Izin': 0,
+      'Sakit': 0,
+      'Alfa': 0,
     };
-    final Set<String> tanggalSudahDihitung = {};
 
-    // 3a. Dari koleksi absensi
+    // Peta tanggal → status final
+    final Map<String, String> statusPerTanggal = {};
+
+    // 3a. Masukkan absensi dulu
     for (final a in absensiPeserta) {
-      final key = _normalizeStatus(a.status);
-      counts[key] = (counts[key] ?? 0) + 1;
-      tanggalSudahDihitung.add(a.tanggal);
+      statusPerTanggal[a.tanggal] = _normalizeStatus(a.status);
     }
 
-    // 3b. Tambahan dari koleksi izin yang DISETUJUI
-    //     (hindari double-count kalau tanggal sudah ada di absensi)
+    // 3b. Izin disetujui MENIMPA status absensi di tanggal yang sama
     for (final i in izinDisetujui) {
-      if (tanggalSudahDihitung.contains(i.tanggal)) continue;
-      final jenis = i.jenis.toLowerCase();
-      final key = (jenis == 'sakit') ? 'Sakit' : 'Izin';
-      counts[key] = (counts[key] ?? 0) + 1;
-      tanggalSudahDihitung.add(i.tanggal);
+      final jenis = i.jenis.toLowerCase().trim();
+      statusPerTanggal[i.tanggal] = (jenis == 'sakit') ? 'Sakit' : 'Izin';
+    }
+
+    // 3c. Hitung counter dari peta
+    for (final status in statusPerTanggal.values) {
+      counts[status] = (counts[status] ?? 0) + 1;
     }
 
     // 4. HITUNG ALFA OTOMATIS
     final totalHariKerja = _workDaysInMonth(_selectedMonth);
-    final totalTercatat = counts['Hadir']! + counts['Terlambat']! +
-        counts['Izin']! + counts['Sakit']!;
+    final totalTercatat = counts['Hadir']! +
+        counts['Terlambat']! +
+        counts['Izin']! +
+        counts['Sakit']!;
     final alfa = (totalHariKerja - totalTercatat).clamp(0, totalHariKerja);
     counts['Alfa'] = alfa;
 
-    // 5. Data untuk Ringkasan
+    // 5. Ringkasan
     final hadirCount = counts['Hadir']!;
     final progress =
         totalHariKerja == 0 ? 0.0 : hadirCount / totalHariKerja;
@@ -424,8 +468,10 @@ class _RekapPageState extends State<RekapPage> {
       const Padding(
         padding: EdgeInsets.fromLTRB(16, 20, 16, 6),
         child: Text('Riwayat Absensi',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold,
-            color: _textPrimary)),
+            style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: _textPrimary)),
       ),
       if (sortedAbsensi.isEmpty)
         _buildNoDataState()
@@ -452,15 +498,18 @@ class _RekapPageState extends State<RekapPage> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.calendar_month, size: 20, color: _primaryBrown),
+                const Icon(Icons.calendar_month,
+                    size: 20, color: _primaryBrown),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(_monthLabel(_selectedMonth),
-                    style: const TextStyle(fontSize: 14,
-                      fontWeight: FontWeight.bold, color: _textPrimary)),
+                      style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: _textPrimary)),
                 ),
                 const Icon(Icons.keyboard_arrow_down,
-                  color: _primaryBrown, size: 22),
+                    color: _primaryBrown, size: 22),
               ],
             ),
           ),
@@ -490,7 +539,8 @@ class _RekapPageState extends State<RekapPage> {
               children: [
                 Center(
                   child: Container(
-                    width: 40, height: 4,
+                    width: 40,
+                    height: 4,
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
                       color: _borderColor,
@@ -499,11 +549,14 @@ class _RekapPageState extends State<RekapPage> {
                   ),
                 ),
                 const Text('Pilih Bulan',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
-                    color: _textPrimary)),
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: _textPrimary)),
                 const SizedBox(height: 12),
                 Wrap(
-                  spacing: 8, runSpacing: 8,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: months.map((m) {
                     final isSelected = m.year == _selectedMonth.year &&
                         m.month == _selectedMonth.month;
@@ -516,18 +569,23 @@ class _RekapPageState extends State<RekapPage> {
                       },
                       labelStyle: TextStyle(
                         color: isSelected ? Colors.white : _textPrimary,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        fontSize: 12),
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        fontSize: 12,
+                      ),
                       backgroundColor: Colors.white,
                       selectedColor: _primaryBrown,
                       side: BorderSide(
                         color: isSelected ? _primaryBrown : _borderColor,
-                        width: 1.2),
+                        width: 1.2,
+                      ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20)),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                       showCheckmark: false,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
+                          horizontal: 12, vertical: 6),
                     );
                   }).toList(),
                 ),
@@ -549,23 +607,27 @@ class _RekapPageState extends State<RekapPage> {
       child: Column(
         children: [
           Row(
-            children: firstRow.asMap().entries.map((e) => Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  right: e.key == firstRow.length - 1 ? 0 : 8),
-                child: _summaryCard(e.value, counts[e.value] ?? 0),
-              ),
-            )).toList(),
+            children: firstRow.asMap().entries.map((e) {
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                      right: e.key == firstRow.length - 1 ? 0 : 8),
+                  child: _summaryCard(e.value, counts[e.value] ?? 0),
+                ),
+              );
+            }).toList(),
           ),
           const SizedBox(height: 8),
           Row(
-            children: secondRow.asMap().entries.map((e) => Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  right: e.key == secondRow.length - 1 ? 0 : 8),
-                child: _summaryCard(e.value, counts[e.value] ?? 0),
-              ),
-            )).toList(),
+            children: secondRow.asMap().entries.map((e) {
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                      right: e.key == secondRow.length - 1 ? 0 : 8),
+                  child: _summaryCard(e.value, counts[e.value] ?? 0),
+                ),
+              );
+            }).toList(),
           ),
         ],
       ),
@@ -584,16 +646,24 @@ class _RekapPageState extends State<RekapPage> {
       child: Column(
         children: [
           Container(
-            width: 34, height: 34,
-            decoration: BoxDecoration(color: style.bg, shape: BoxShape.circle),
+            width: 34,
+            height: 34,
+            decoration:
+                BoxDecoration(color: style.bg, shape: BoxShape.circle),
             child: Icon(style.icon, color: style.fg, size: 18),
           ),
           const SizedBox(height: 6),
-          Text(label, style: const TextStyle(fontSize: 11,
-            fontWeight: FontWeight.w600, color: _textPrimary)),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: _textPrimary)),
           const SizedBox(height: 2),
-          Text('$value', style: const TextStyle(fontSize: 18,
-            fontWeight: FontWeight.bold, color: _textPrimary)),
+          Text('$value',
+              style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: _textPrimary)),
         ],
       ),
     );
@@ -618,11 +688,15 @@ class _RekapPageState extends State<RekapPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Ringkasan Kehadiran',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
-                color: _textPrimary)),
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: _textPrimary)),
             const SizedBox(height: 2),
-            Text('Data kehadiran dalam periode ${_monthLabel(_selectedMonth)}',
-              style: const TextStyle(fontSize: 11, color: _textSecondary)),
+            Text(
+                'Data kehadiran dalam periode ${_monthLabel(_selectedMonth)}',
+                style: const TextStyle(
+                    fontSize: 11, color: _textSecondary)),
             const SizedBox(height: 12),
             ClipRRect(
               borderRadius: BorderRadius.circular(20),
@@ -630,18 +704,22 @@ class _RekapPageState extends State<RekapPage> {
                 value: progress.clamp(0.0, 1.0),
                 minHeight: 10,
                 backgroundColor: const Color(0xFFE9E0D4),
-                valueColor: const AlwaysStoppedAnimation(Color(0xFF8A512B)),
+                valueColor:
+                    const AlwaysStoppedAnimation(Color(0xFF8A512B)),
               ),
             ),
             const SizedBox(height: 8),
             Row(
               children: [
                 Text('$hadirCount / $workDays',
-                  style: const TextStyle(fontSize: 13,
-                    fontWeight: FontWeight.bold, color: _textPrimary)),
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: _textPrimary)),
                 const SizedBox(width: 6),
                 const Text('Hadir',
-                  style: TextStyle(fontSize: 12, color: _textSecondary)),
+                    style: TextStyle(
+                        fontSize: 12, color: _textSecondary)),
               ],
             ),
             const SizedBox(height: 12),
@@ -658,7 +736,8 @@ class _RekapPageState extends State<RekapPage> {
                         '${_selectedMonth.year}',
                   ),
                 ),
-                Container(width: 1, height: 34, color: const Color(0xFFE5DDD3)),
+                Container(
+                    width: 1, height: 34, color: const Color(0xFFE5DDD3)),
                 Expanded(
                   child: _infoItem(
                     icon: Icons.schedule,
@@ -689,12 +768,17 @@ class _RekapPageState extends State<RekapPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 10,
-                  color: _textSecondary)),
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: 10, color: _textSecondary)),
                 const SizedBox(height: 2),
-                Text(value, style: const TextStyle(fontSize: 12,
-                  fontWeight: FontWeight.w600, color: _textPrimary),
-                  maxLines: 2, overflow: TextOverflow.ellipsis),
+                Text(value,
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _textPrimary),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
               ],
             ),
           ),
@@ -707,21 +791,28 @@ class _RekapPageState extends State<RekapPage> {
   Widget _buildAttendanceItem(AbsensiModel a) {
     final normalized = _normalizeStatus(a.status);
     final style = _statusStyle(normalized);
-    final masuk = (a.jamMasuk == null || a.jamMasuk!.isEmpty) ? '-' : a.jamMasuk!;
-    final pulang = (a.jamPulang == null || a.jamPulang!.isEmpty) ? '-' : a.jamPulang!;
+    final masuk = (a.jamMasuk == null || a.jamMasuk!.isEmpty)
+        ? '-'
+        : a.jamMasuk!;
+    final pulang = (a.jamPulang == null || a.jamPulang!.isEmpty)
+        ? '-'
+        : a.jamPulang!;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: _dividerColor, width: 1)),
+          border:
+              Border(bottom: BorderSide(color: _dividerColor, width: 1)),
         ),
         child: Row(
           children: [
             Container(
-              width: 36, height: 36,
-              decoration: BoxDecoration(color: style.bg, shape: BoxShape.circle),
+              width: 36,
+              height: 36,
+              decoration:
+                  BoxDecoration(color: style.bg, shape: BoxShape.circle),
               child: Icon(style.icon, color: style.fg, size: 18),
             ),
             const SizedBox(width: 12),
@@ -729,23 +820,32 @@ class _RekapPageState extends State<RekapPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(a.tanggal, style: const TextStyle(fontSize: 13,
-                    fontWeight: FontWeight.w600, color: _textPrimary)),
+                  Text(a.tanggal,
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: _textPrimary)),
                   const SizedBox(height: 2),
                   Text('Masuk: $masuk   ·   Pulang: $pulang',
-                    style: const TextStyle(fontSize: 11,
-                      color: _textSecondary),
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                      style: const TextStyle(
+                          fontSize: 11, color: _textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),
             const SizedBox(width: 6),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: style.bg, borderRadius: BorderRadius.circular(20)),
-              child: Text(normalized, style: TextStyle(fontSize: 10,
-                fontWeight: FontWeight.w600, color: style.fg)),
+                  color: style.bg,
+                  borderRadius: BorderRadius.circular(20)),
+              child: Text(normalized,
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: style.fg)),
             ),
           ],
         ),
@@ -762,14 +862,18 @@ class _RekapPageState extends State<RekapPage> {
           Icon(Icons.event_busy_outlined, size: 48, color: _borderColor),
           const SizedBox(height: 12),
           const Text('Belum ada data absensi',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
-              color: _textPrimary)),
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: _textPrimary)),
           const SizedBox(height: 4),
           Text(
             'Belum ada data untuk ${_selectedParticipant ?? "peserta"} '
             'pada ${_monthLabel(_selectedMonth)}.',
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12, color: _textSecondary)),
+            style:
+                const TextStyle(fontSize: 12, color: _textSecondary),
+          ),
         ],
       ),
     );
@@ -786,8 +890,10 @@ class _RekapPageState extends State<RekapPage> {
             Icon(Icons.cloud_off_outlined, size: 48, color: _borderColor),
             const SizedBox(height: 12),
             const Text('Gagal memuat data',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
-                color: _textPrimary)),
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: _textPrimary)),
             const SizedBox(height: 12),
             ElevatedButton(
               style: ElevatedButton.styleFrom(

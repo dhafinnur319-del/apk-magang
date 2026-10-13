@@ -9,6 +9,7 @@ import 'riwayat_page.dart';
 import 'profil_page.dart';
 import 'izin_page.dart';
 import 'riwayat_izin_page.dart';
+import '../../widgets/logout_dialog.dart';
 
 class DashboardPeserta extends StatefulWidget {
   const DashboardPeserta({super.key});
@@ -98,6 +99,10 @@ class _DashboardPesertaState extends State<DashboardPeserta> {
   }
 
   Future<void> _logout() async {
+    // Tampilkan dialog konfirmasi
+    final confirmed = await LogoutDialog.show(context);
+    if (!confirmed) return;
+
     await AuthService().logout();
     if (!mounted) return;
     Navigator.pushReplacement(
@@ -206,6 +211,8 @@ class _DashboardPesertaState extends State<DashboardPeserta> {
 
   // ============================================================
   // ACTION BUTTON WIDGET
+  // - Icon RATA KIRI
+  // - Teks TETAP DI TENGAH
   // ============================================================
   Widget _buildActionButton({
     required String label,
@@ -213,6 +220,36 @@ class _DashboardPesertaState extends State<DashboardPeserta> {
     required VoidCallback? onPressed,
     required bool isPrimary,
   }) {
+    // Widget isi tombol: icon kiri + teks tengah
+    Widget buildContent({required Color iconColor}) {
+      return Stack(
+        alignment: Alignment.center,
+        children: [
+          // ---- Icon di kiri ----
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Icon(
+              icon,
+              size: 20,
+              color: iconColor,
+            ),
+          ),
+
+          // ---- Teks di tengah ----
+          Center(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     if (isPrimary) {
       return SizedBox(
         height: 52,
@@ -222,34 +259,17 @@ class _DashboardPesertaState extends State<DashboardPeserta> {
           style: ElevatedButton.styleFrom(
             backgroundColor: _primaryBrown,
             foregroundColor: Colors.white,
-            disabledBackgroundColor: _primaryBrown.withOpacity(0.5),
-            disabledForegroundColor: Colors.white.withOpacity(0.7),
+            disabledBackgroundColor:
+                _primaryBrown.withValues(alpha: 0.5),
+            disabledForegroundColor:
+                Colors.white.withValues(alpha: 0.7),
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 20),
-              const SizedBox(width: 10),
-              Container(
-                width: 1,
-                height: 20,
-                color: Colors.white.withOpacity(0.3),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
-          ),
+          child: buildContent(iconColor: Colors.white),
         ),
       );
     } else {
@@ -265,28 +285,9 @@ class _DashboardPesertaState extends State<DashboardPeserta> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 20),
-              const SizedBox(width: 10),
-              Container(
-                width: 1,
-                height: 20,
-                color: _primaryBrown.withOpacity(0.3),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
-          ),
+          child: buildContent(iconColor: _primaryBrown),
         ),
       );
     }
@@ -345,7 +346,8 @@ class _DashboardPesertaState extends State<DashboardPeserta> {
                               ),
                             ),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
                                   'SIMAGANG',
@@ -452,7 +454,8 @@ class _DashboardPesertaState extends State<DashboardPeserta> {
                           // ==========================================
                           Container(
                             height: 64,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               border: Border.all(
@@ -460,7 +463,8 @@ class _DashboardPesertaState extends State<DashboardPeserta> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
                               children: [
                                 Row(
                                   children: [

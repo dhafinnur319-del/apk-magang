@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/izin_model.dart';
 import '../../services/izin_service.dart';
 
@@ -13,6 +14,7 @@ class IzinAdminPage extends StatelessWidget {
   static const Color _borderColor = Color(0xFFE2D6C8);
   static const Color _avatarBg = Color(0xFFF0E5D7);
   static const Color _dividerColor = Color(0xFFE5DDD3);
+  static const Color _danger = Color(0xFFB82C29);
 
   // ---------- STATUS STYLE ----------
   ({Color bg, Color fg, IconData icon, String label}) _statusStyle(
@@ -149,9 +151,152 @@ class IzinAdminPage extends StatelessWidget {
     );
   }
 
+  // ---------- KONFIRMASI HAPUS ----------
+  Future<bool> _confirmDelete(BuildContext context, IzinModel izin) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 380),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF7D2D0),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.delete_outline,
+                      color: _danger,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Hapus Pengajuan?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: _textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Pengajuan izin oleh "${izin.nama}" pada ${izin.tanggal} akan dihapus permanen.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: _textSecondary,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 44,
+                          child: OutlinedButton(
+                            onPressed: () =>
+                                Navigator.pop(dialogContext, false),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: _primaryBrown,
+                              backgroundColor: Colors.white,
+                              side: const BorderSide(
+                                color: _primaryBrown,
+                                width: 1.3,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: const Text(
+                              'Batal',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: SizedBox(
+                          height: 44,
+                          child: ElevatedButton(
+                            onPressed: () =>
+                                Navigator.pop(dialogContext, true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _danger,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: const Text(
+                              'Hapus',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    return result ?? false;
+  }
+
+  // ---------- PROSES HAPUS ----------
+  Future<void> _deleteIzin(BuildContext context, IzinModel izin) async {
+    final confirmed = await _confirmDelete(context, izin);
+    if (!confirmed) return;
+
+    try {
+      await IzinService().hapusIzin(izin.id);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Pengajuan ${izin.nama} berhasil dihapus'),
+          backgroundColor: _primaryBrown,
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menghapus: $e'),
+          backgroundColor: _danger,
+        ),
+      );
+    }
+  }
+
   // ---------- IZIN CARD ----------
   Widget _buildIzinCard(BuildContext context, IzinModel izin) {
     final style = _statusStyle(izin.status);
+    final hasLampiran = izin.lampiran != null && izin.lampiran!.isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -165,8 +310,7 @@ class IzinAdminPage extends StatelessWidget {
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          childrenPadding:
-              const EdgeInsets.fromLTRB(14, 0, 14, 14),
+          childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
           expandedCrossAxisAlignment: CrossAxisAlignment.start,
 
           // ---------- COLLAPSED VIEW ----------
@@ -239,9 +383,8 @@ class IzinAdminPage extends StatelessWidget {
               ],
             ),
           ),
-          // Ganti icon default jadi chevron dengan warna tema
-          iconColor: _primaryBrown,
-          collapsedIconColor: _primaryBrown,
+
+
 
           // ---------- EXPANDED VIEW ----------
           children: [
@@ -262,34 +405,31 @@ class IzinAdminPage extends StatelessWidget {
                 value: izin.keterangan,
               ),
 
-            // Lampiran (jika ada)
-            if (izin.lampiran != null && izin.lampiran!.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              const Text(
-                'Lampiran',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: _textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.network(
-                  izin.lampiran!,
-                  height: 160,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1E6D8),
-                      borderRadius: BorderRadius.circular(10),
+            // Lampiran (jika ada) — tombol Lihat, tanpa preview
+            if (hasLampiran) ...[
+              const SizedBox(height: 4),
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: OutlinedButton.icon(
+                  onPressed: () => _openLampiran(context, izin.lampiran!),
+                  icon: const Icon(Icons.image_outlined, size: 18),
+                  label: const Text(
+                    'Lihat Lampiran',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
                     ),
-                    child: const Center(
-                      child: Icon(Icons.broken_image_outlined,
-                          color: _primaryBrown, size: 32),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _primaryBrown,
+                    backgroundColor: Colors.white,
+                    side: const BorderSide(
+                      color: _primaryBrown,
+                      width: 1.3,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                 ),
@@ -363,17 +503,49 @@ class IzinAdminPage extends StatelessWidget {
                   children: [
                     Icon(style.icon, color: style.fg, size: 18),
                     const SizedBox(width: 8),
-                    Text(
-                      'Pengajuan telah ${style.label.toLowerCase()}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: style.fg,
+                    Expanded(
+                      child: Text(
+                        'Pengajuan telah ${style.label.toLowerCase()}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: style.fg,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
+
+            const SizedBox(height: 10),
+
+            // ---------- TOMBOL HAPUS DI EXPANDED VIEW ----------
+            SizedBox(
+              width: double.infinity,
+              height: 42,
+              child: OutlinedButton.icon(
+                onPressed: () => _deleteIzin(context, izin),
+                icon: const Icon(Icons.delete_outline, size: 18),
+                label: const Text(
+                  'Hapus Pengajuan',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _danger,
+                  backgroundColor: Colors.white,
+                  side: const BorderSide(
+                    color: _danger,
+                    width: 1.3,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -419,6 +591,35 @@ class IzinAdminPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // ---------- OPEN LAMPIRAN (buka di browser/tab baru) ----------
+  Future<void> _openLampiran(BuildContext context, String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('URL lampiran tidak valid')),
+      );
+      return;
+    }
+
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tidak bisa membuka lampiran')),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal membuka lampiran: $e')),
+      );
+    }
   }
 
   // ---------- EMPTY STATE ----------

@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -15,12 +14,14 @@ class IzinPage extends StatefulWidget {
 class _IzinPageState extends State<IzinPage> {
   final _alasanController = TextEditingController();
   final _keteranganController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
 
   String _jenis = 'Izin';
   DateTime _tanggal = DateTime.now();
-  File? _lampiran;
+  XFile? _lampiran;
   bool _loading = false;
+
+  // ===== Pesan error (ditampilkan di bawah field Alasan) =====
+  String? _errorAlasan;
 
   // ============================================================
   // DESIGN SYSTEM — SAMA DENGAN DASHBOARD PESERTA
@@ -70,8 +71,23 @@ class _IzinPageState extends State<IzinPage> {
   // FILE PICKER (LAMPIRAN)
   // ============================================================
   Future<void> _pilihLampiran() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked != null) setState(() => _lampiran = File(picked.path));
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+      if (picked != null) {
+        setState(() => _lampiran = picked);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal memilih gambar: $e'),
+          backgroundColor: _danger,
+        ),
+      );
+    }
   }
 
   void _hapusLampiran() {
@@ -82,17 +98,18 @@ class _IzinPageState extends State<IzinPage> {
   // SUBMIT
   // ============================================================
   Future<void> _kirim() async {
+    // Validasi alasan — tampilkan error di bawah field Alasan
     if (_alasanController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Alasan wajib diisi'),
-          backgroundColor: Color(0xFFB94036),
-        ),
-      );
+      setState(() => _errorAlasan = 'Alasan wajib diisi');
       return;
     }
 
-    setState(() => _loading = true);
+    // Reset error saat mulai submit
+    setState(() {
+      _errorAlasan = null;
+      _loading = true;
+    });
+
     final user = await AuthService().getUserData();
     final result = await IzinService().ajukanIzin(
       nama: user?.nama ?? '-',
@@ -102,6 +119,7 @@ class _IzinPageState extends State<IzinPage> {
       keterangan: _keteranganController.text,
       lampiran: _lampiran,
     );
+
     if (!mounted) return;
     setState(() => _loading = false);
 
@@ -245,14 +263,37 @@ class _IzinPageState extends State<IzinPage> {
                           minLines: 4,
                           maxLines: 6,
                           textInputAction: TextInputAction.newline,
+                          onChanged: (_) {
+                            // Hapus pesan error saat user mulai mengetik
+                            if (_errorAlasan != null) {
+                              setState(() => _errorAlasan = null);
+                            }
+                          },
                           style: TextStyle(
                             fontSize: 15,
                             color: _textPrimary,
                           ),
                           decoration: _inputDecoration(
                             hint: 'Masukkan alasan pengajuan izin...',
+                            hasError: _errorAlasan != null,
                           ),
                         ),
+
+                        // ===== Pesan error di bawah field Alasan =====
+                        if (_errorAlasan != null) ...[
+                          const SizedBox(height: 6),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4),
+                            child: Text(
+                              _errorAlasan!,
+                              style: const TextStyle(
+                                color: Color(0xFFB94036),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
 
                         const SizedBox(height: 20),
 
@@ -334,7 +375,7 @@ class _IzinPageState extends State<IzinPage> {
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
-                                    _lampiran!.path.split('/').last,
+                                    _lampiran!.name,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
@@ -371,9 +412,9 @@ class _IzinPageState extends State<IzinPage> {
                               backgroundColor: _primaryBrown,
                               foregroundColor: Colors.white,
                               disabledBackgroundColor:
-                                  _primaryBrown.withOpacity(0.5),
+                                  _primaryBrown.withValues(alpha: 0.5),
                               disabledForegroundColor:
-                                  Colors.white.withOpacity(0.8),
+                                  Colors.white.withValues(alpha: 0.8),
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -430,6 +471,7 @@ class _IzinPageState extends State<IzinPage> {
   InputDecoration _inputDecoration({
     String? hint,
     Widget? suffixIcon,
+    bool hasError = false,
   }) {
     return InputDecoration(
       hintText: hint,
@@ -446,11 +488,17 @@ class _IzinPageState extends State<IzinPage> {
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: _borderColor, width: 1),
+        borderSide: BorderSide(
+          color: hasError ? _danger : _borderColor,
+          width: hasError ? 1.2 : 1,
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: _primaryBrown, width: 1.5),
+        borderSide: BorderSide(
+          color: hasError ? _danger : _primaryBrown,
+          width: 1.5,
+        ),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),

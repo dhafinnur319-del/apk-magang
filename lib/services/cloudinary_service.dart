@@ -1,14 +1,15 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 
 class CloudinaryService {
   // ⚠️ GANTI dengan milikmu dari Cloudinary Console
-  static const String cloudName = 'ISI_CLOUD_NAME_KAMU';
-  static const String uploadPreset = 'ISI_PRESET_NAME_KAMU';
+  static const String cloudName = 'bpsu7log';
+  static const String uploadPreset = 'simagang_uploads';
 
-  /// Upload file ke Cloudinary. Return URL publik atau null jika gagal.
-  static Future<String?> uploadFile(File file, {String? folder}) async {
+  /// Upload file ke Cloudinary. Menerima XFile (kompatibel Web + Mobile).
+  /// Return URL publik atau null jika gagal.
+  static Future<String?> uploadFile(XFile file, {String? folder}) async {
     try {
       final uri = Uri.parse(
         'https://api.cloudinary.com/v1_1/$cloudName/upload',
@@ -21,7 +22,16 @@ class CloudinaryService {
         request.fields['folder'] = folder;
       }
 
-      request.files.add(await http.MultipartFile.fromPath('file', file.path));
+      // Baca bytes — bekerja di Web & Mobile (tanpa dart:io)
+      final bytes = await file.readAsBytes();
+
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          bytes,
+          filename: file.name,
+        ),
+      );
 
       final response = await request.send();
 

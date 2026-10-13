@@ -33,6 +33,9 @@ class _LoginPageState extends State<LoginPage> {
   bool _loading = false;
   bool _obscurePassword = true;
 
+  // ===== Pesan error (ditampilkan di atas tombol LOGIN) =====
+  String? _errorMessage;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -45,21 +48,21 @@ class _LoginPageState extends State<LoginPage> {
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email dan password wajib diisi')),
-      );
+      setState(() => _errorMessage = 'Email dan password wajib diisi!');
       return;
     }
 
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
+
     final user = await AuthService().login(email, password);
     if (!mounted) return;
     setState(() => _loading = false);
 
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email atau password salah')),
-      );
+      setState(() => _errorMessage = 'Email atau password salah!');
       return;
     }
 
@@ -104,57 +107,55 @@ class _LoginPageState extends State<LoginPage> {
           ),
 
           // ===================================================
-// ===================================================
-// Layer 2: Fade ivory di SELURUH area foto
-// - Tipis di atas (foto masih terlihat)
-// - Semakin tebal ke bawah
-// - Sangat tebal di 120px terakhir (menyatu ke background)
-// ===================================================
-Positioned(
-  top: 0,
-  left: 0,
-  right: 0,
-  height: photoHeight,
-  child: Container(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          _Palette.ivory.withValues(alpha: 0.10), // atas: foto masih jelas
-          _Palette.ivory.withValues(alpha: 0.15),
-          _Palette.ivory.withValues(alpha: 0.30),
-          _Palette.ivory.withValues(alpha: 0.55),
-          _Palette.ivory.withValues(alpha: 0.85), // bawah foto: hampir putih
-          _Palette.ivory,                          // ujung foto: ivory penuh
-        ],
-        stops: const [
-          0.0,   // atas foto
-          0.35,
-          0.60,
-          0.80,
-          0.92,
-          1.0,   // ujung bawah foto
-        ],
-      ),
-    ),
-  ),
-),
+          // Layer 2: Fade ivory di SELURUH area foto
+          // - Tipis di atas (foto masih terlihat)
+          // - Semakin tebal ke bawah
+          // - Sangat tebal di 120px terakhir (menyatu ke background)
+          // ===================================================
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: photoHeight,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    _Palette.ivory.withValues(alpha: 0.10),
+                    _Palette.ivory.withValues(alpha: 0.15),
+                    _Palette.ivory.withValues(alpha: 0.30),
+                    _Palette.ivory.withValues(alpha: 0.55),
+                    _Palette.ivory.withValues(alpha: 0.85),
+                    _Palette.ivory,
+                  ],
+                  stops: const [
+                    0.0,
+                    0.35,
+                    0.60,
+                    0.80,
+                    0.92,
+                    1.0,
+                  ],
+                ),
+              ),
+            ),
+          ),
 
-// ===================================================
-// Layer 2b: Overlay ivory halus di SELURUH area foto
-// (opsional) agar foto terlihat "sedikit tertutupi"
-// seperti referensi — bukan hanya di tepi bawah.
-// ===================================================
-Positioned(
-  top: 0,
-  left: 0,
-  right: 0,
-  height: photoHeight - 120,      // hanya area foto di atas fade
-  child: Container(
-    color: _Palette.ivory.withValues(alpha: 0.15),
-  ),
-),
+          // ===================================================
+          // Layer 2b: Overlay ivory halus di SELURUH area foto
+          // ===================================================
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: photoHeight - 120,
+            child: Container(
+              color: _Palette.ivory.withValues(alpha: 0.15),
+            ),
+          ),
+
           // ===================================================
           // Layer 3: Kurva dekorasi top-left
           // ===================================================
@@ -197,7 +198,8 @@ Positioned(
                   ),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight - 40,
+                      minHeight: (constraints.maxHeight - 40)
+                          .clamp(0.0, double.infinity),
                     ),
                     child: Center(
                       child: ConstrainedBox(
@@ -247,7 +249,21 @@ Positioned(
                               ),
                             ),
 
-                            SizedBox(height: isSmall ? 20 : 28),
+                            // ===== Pesan error (jika ada) =====
+                            if (_errorMessage != null) ...[
+                              const SizedBox(height: 14),
+                              Text(
+                                _errorMessage!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Color(0xFFB94036),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+
+                            SizedBox(height: isSmall ? 16 : 22),
 
                             // ===== Tombol LOGIN =====
                             _LoginButton(
@@ -275,35 +291,35 @@ Positioned(
   }
 }
 
-// ============================================================
-// Top bar — "Melayani Dengan Hati" + ikon ornamen
-// ============================================================
 class _TopBar extends StatelessWidget {
   const _TopBar();
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        const Text(
-          'Melayani\nDengan Hati',
-          textAlign: TextAlign.right,
-          style: TextStyle(
-            fontSize: 12,
-            height: 1.35,
-            color: _Palette.textPrimary,
-            fontWeight: FontWeight.w600,
+    return Transform.translate(
+      offset: const Offset(22, -30),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Text(
+            'Melayani\nDengan Hati',
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.35,
+              color: _Palette.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-        const SizedBox(width: 10),
-        Icon(
-          Icons.local_florist_outlined,
-          color: _Palette.brownPrimary,
-          size: 24,
-        ),
-      ],
+          const SizedBox(width: 6),
+          Icon(
+            Icons.local_florist_outlined,
+            color: _Palette.brownPrimary,
+            size: 22,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -320,8 +336,6 @@ class _Branding extends StatelessWidget {
     return Column(
       children: [
         // ===== Logo toga SIMAGANG =====
-        // Ganti dengan Image.asset('assets/images/simagang_logo.png')
-        // jika tersedia file logo PNG.
         SizedBox(
           width: isSmall ? 80 : 100,
           height: isSmall ? 80 : 100,
@@ -334,14 +348,6 @@ class _Branding extends StatelessWidget {
                   Icons.school,
                   size: isSmall ? 56 : 70,
                   color: _Palette.brownPrimary,
-                ),
-              ),
-              Positioned(
-                bottom: 8,
-                child: Icon(
-                  Icons.keyboard_arrow_down,
-                  size: isSmall ? 38 : 48,
-                  color: _Palette.brownLight,
                 ),
               ),
             ],
@@ -370,14 +376,14 @@ class _Branding extends StatelessWidget {
         ),
         const SizedBox(height: 6),
 
-        // ===== BAPPEDA JAWA TENGAH =====
+        // ===== BAPENDA PROV JAWA TENGAH =====
         SizedBox(
           width: double.infinity,
           child: FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.center,
             child: Text(
-              'BAPPEDA JAWA TENGAH',
+              'BAPENDA PROV JAWA TENGAH',
               maxLines: 1,
               softWrap: false,
               style: TextStyle(
@@ -576,26 +582,6 @@ class _BottomBranding extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
-          Text(
-            'BAPPEDA',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
-              color: _Palette.brownPrimary,
-              letterSpacing: 1.5,
-              height: 1.2,
-            ),
-          ),
-          Text(
-            'JAWA TENGAH',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
-              color: _Palette.brownPrimary,
-              letterSpacing: 1.5,
-              height: 1.2,
-            ),
-          ),
           SizedBox(height: 6),
           SizedBox(
             width: 40,
@@ -607,7 +593,7 @@ class _BottomBranding extends StatelessWidget {
           ),
           SizedBox(height: 8),
           Text(
-            'Kolaborasi Perencanaan\nuntuk Jawa Tengah Maju',
+            'Kolaborasi Perencanaan\nuntuk Jawa Tengah Maju.',
             style: TextStyle(
               fontSize: 11,
               fontStyle: FontStyle.italic,
